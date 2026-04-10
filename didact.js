@@ -100,6 +100,10 @@ function performUnitOfWork(fiber) {
     // 1. Return the child, if it exists.
     // 2. Otherwise, walk up the tree looking for a sibling.
     // 3. If no sibling is found at any level, return undefined (we are done).
+
+    if (fiber.child) {
+        return fiber.child
+    }
 }
 
 function updateHostComponent(fiber) {
