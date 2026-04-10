@@ -104,6 +104,14 @@ function performUnitOfWork(fiber) {
     if (fiber.child) {
         return fiber.child
     }
+
+    let nextFiber = fiber
+    while (nextFiber) {
+        if (nextFiber.sibling) {
+            return nextFiber.sibling
+        }
+        nextFiber = nextFiber.parent
+    }
 }
 
 function updateHostComponent(fiber) {
