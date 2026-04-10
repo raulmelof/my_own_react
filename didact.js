@@ -54,6 +54,8 @@ function render(element, container) {
         .forEach(name => {
             dom[name] = element.props[name];
         });
+
+    element.props.children.forEach(child => render(child, dom));
 }
 
 const Didact = { createElement, render };
