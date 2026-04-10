@@ -112,6 +112,8 @@ function performUnitOfWork(fiber) {
         }
         nextFiber = nextFiber.parent
     }
+
+    return undefined
 }
 
 function updateHostComponent(fiber) {
