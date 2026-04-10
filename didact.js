@@ -56,6 +56,8 @@ function render(element, container) {
         });
 
     element.props.children.forEach(child => render(child, dom));
+
+    container.appendChild(dom);
 }
 
 const Didact = { createElement, render };
