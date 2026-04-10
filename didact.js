@@ -109,6 +109,7 @@ function updateHostComponent(fiber) {
     reconcileChildren(fiber, fiber.props.children)
 }
 
+/*
 const Didact = { createElement, render };
 
 // We are not using JSX yet, so we write the nested calls manually
@@ -121,6 +122,7 @@ const element = Didact.createElement(
 
 const container = document.getElementById("root");
 Didact.render(element, container);
+*/
 
 /* Let's simulate this tree:
       A
