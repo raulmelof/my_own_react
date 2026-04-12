@@ -340,7 +340,35 @@ function updateFunctionComponent(fiber) {
 }
 
 function useState(initial) {
-    // TODO: implement based on the steps above
+    // 1. Retrieve old state
+    const oldHook = wipFiber.alternate && wipFiber.alternate.hooks && wipFiber.alternate.hooks[hookIndex];
+
+    // 2. Initialize
+    const newHook = {
+        state: oldHook ? oldHook.state : initial,
+        queue: []
+    };
+
+    // 3. Process the queue (Batching)
+    const actions = oldHook ? oldHook.queue : [];
+    actions.forEach(action => {newHook.state = typeof action === "function" ? action(newHook.state): action});
+
+    // 4. The setState dispatcher
+    const setState = action => {
+    newHook.queue.push(action);
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot,
+    };
+    nextUnitOfWork = wipRoot;
+    deletions = [];
+    };
+
+    // 5. Advance the cursor
+    wipFiber.hooks.push(newHook);
+    hookIndex++;
+    return [newHook.state, setState];
 }
 
 const Didact = { createElement, render };
