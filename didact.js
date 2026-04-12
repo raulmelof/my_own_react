@@ -220,7 +220,43 @@ const isNew       = (prev, next) => key => prev[key] !== next[key]
 const isGone      = (prev, next) => key => !(key in next)
 
 function updateDom(dom, prevProps, nextProps) {
-    // TODO: implement the four cases described above
+    // 1. Remove event listeners that changed or no longer exist
+    Object.keys(prevProps)
+        .filter(isEvent)
+        .filter(key => !(key in nextProps) || isNew(prevProps, nextProps)(key))
+        .forEach(name => {
+            const eventType = name
+                .toLowerCase()
+                .substring(2)
+            dom.removeEventListener(eventType, prevProps[name])
+        })
+
+    // 2. Remove regular props that no longer exist in the new props
+    Object.keys(prevProps)
+        .filter(isProperty)
+        .filter(isGone(prevProps, nextProps))
+        .forEach(name => {
+            dom[name] = ""
+        })
+
+    // 3. Set regular props that are new or have changed
+    Object.keys(nextProps)
+        .filter(isProperty)
+        .filter(isNew(prevProps, nextProps))
+        .forEach(name => {
+            dom[name] = nextProps[name]
+        })
+
+    // 4. Add event listeners that are new or have changed
+    Object.keys(nextProps)
+        .filter(isEvent)
+        .filter(isNew(prevProps, nextProps))
+        .forEach(name => {
+        const eventType = name
+            .toLowerCase()
+            .substring(2)
+        dom.addEventListener(eventType, nextProps[name])
+        })
 }
 
 function reconcileChildren(wipFiber, elements) {
