@@ -34,52 +34,66 @@ function createTextElement(text) {
     }
 }
 
-let wipRoot = null
-let currentRoot = null
-let deletions = null
+let wipRoot = null      // Tree that is being worked on
+let currentRoot = null  // Tree that is currently being rendered
+let deletions = null    // Array of nodes that will be deleted
 
 // Updated render: sets up the wipRoot instead of touching the DOM directly
 function render(element, container) {
-    wipRoot = {
-        dom: container,
-        props: { children: [element] },
-        alternate: currentRoot,
+    wipRoot = { // Creates a new root fiber
+        dom: container, // DOM is container, which is where the rendering is going to happen
+        props: { children: [element] }, // Wraps the element into a children array 
+        alternate: currentRoot, // Links wipRoot to the previous tree, which is currentRoot
     }
-    deletions = []
-    nextUnitOfWork = wipRoot
+    deletions = [] // Resets the deletions array to empty
+    nextUnitOfWork = wipRoot // nextUnitOfWork is wipRoot, therefore, the work loop starts from the wipRoot
 }
 
+// Applies all changes from the work-in-progress tree to the real DOM
 function commitRoot() {
-    deletions.forEach(commitWork)
-    commitWork(wipRoot.child)
-    currentRoot = wipRoot
-    wipRoot = null
+    deletions.forEach(commitWork) // Calls commitWork on each fiber inside the deletions array, in order to delete those fibers' nodes from the DOM
+    commitWork(wipRoot.child) // Starts applying changes from the root’s first child
+    currentRoot = wipRoot // Updates currentRoot
+    wipRoot = null // Clears the wipRoot variable
 }
 
+// Recursively applies changes for each fiber to the DOM
 function commitWork(fiber) {
-    if (!fiber) return
+    if (!fiber) return // If there's no fiber, ceases this function's execution
 
-    let domParentFiber = fiber.parent
+    let domParentFiber = fiber.parent // domParentFiber is the current fiber’s parent
+
+    // Walks up the tree, stops when a fiber that has a real DOM node is found
     while (!domParentFiber.dom) {
         domParentFiber = domParentFiber.parent
     }
-    const domParent = domParentFiber.dom
+    const domParent = domParentFiber.dom // Stores the value of the real DOM that has just been found
 
+    // If the fiber is marked as "PLACEMENT" AND has a DOM node, then append it to the parent DOM node
     if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
         domParent.appendChild(fiber.dom)
+
+    // If the fiber is marked as "UPDATE", call updateDom, which updates de DOM
     } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
         updateDom(fiber.dom, fiber.alternate.props, fiber.props)
+
+    // If the fiber is marked as "PLACEMENT", call commitDeletion, which handles the removal of the node (and possibly its children)
     } else if (fiber.effectTag === "DELETION") {
         commitDeletion(fiber, domParent)
     }
 
-    commitWork(fiber.child)
-    commitWork(fiber.sibling)
+    commitWork(fiber.child) // After handling the current fiber, move to its first child, to recursively process children
+    commitWork(fiber.sibling) // After process all children, move to the next sibling.
 }
 
+// Removes a fiber's DOM node from its parent.
 function commitDeletion(fiber, domParent) {
+
+    // If this fiber has a DOM node, remove it
     if (fiber.dom) {
         domParent.removeChild(fiber.dom)
+    
+    // If there is no DOM node, recurse into this fiber's children
     } else {
         commitDeletion(fiber.child, domParent)
     }
