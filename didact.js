@@ -229,7 +229,7 @@ function updateDom(dom, prevProps, nextProps) {
                 .toLowerCase()
                 .substring(2)
             dom.removeEventListener(eventType, prevProps[name])
-        })
+        });
 
     // 2. Remove regular props that no longer exist in the new props
     Object.keys(prevProps)
@@ -237,7 +237,7 @@ function updateDom(dom, prevProps, nextProps) {
         .filter(isGone(prevProps, nextProps))
         .forEach(name => {
             dom[name] = ""
-        })
+        });
 
     // 3. Set regular props that are new or have changed
     Object.keys(nextProps)
@@ -245,7 +245,7 @@ function updateDom(dom, prevProps, nextProps) {
         .filter(isNew(prevProps, nextProps))
         .forEach(name => {
             dom[name] = nextProps[name]
-        })
+        });
 
     // 4. Add event listeners that are new or have changed
     Object.keys(nextProps)
@@ -256,7 +256,7 @@ function updateDom(dom, prevProps, nextProps) {
             .toLowerCase()
             .substring(2)
         dom.addEventListener(eventType, nextProps[name])
-        })
+        });
 }
 
 function reconcileChildren(wipFiber, elements) {
@@ -272,19 +272,43 @@ function reconcileChildren(wipFiber, elements) {
 
         const sameType = oldFiber && element && element.type == oldFiber.type
 
-        // TODO – Case 1: same type → UPDATE
-        //   Performance win: The element type is the same, so we recycle the DOM node.
-        //   Create a new fiber keeping the existing DOM node, copy the new props, and set the effectTag to "UPDATE".
+        // Case 1: same type → UPDATE
+        //     Performance win: The element type is the same, so we recycle the DOM node.
+        //     Create a new fiber keeping the existing DOM node, copy the new props, and set the effectTag to "UPDATE".
+        if (sameType) {
+            newFiber = {
+                type: oldFiber.type,
+                props: element.props,
+                dom: oldFiber.dom,
+                parent: wipFiber,
+                alternate: oldFiber,
+                effectTag: "UPDATE",
+            };
+        }
 
-        // TODO – Case 2: new element, different type → PLACEMENT
-        //   Types differ (e.g., morphing an <h1> into a <span>), so we can't recycle.
-        //   A new DOM node must be created from scratch.
-        //   Create a new fiber with dom: null and set effectTag to "PLACEMENT".
+        // Case 2: new element, different type → PLACEMENT
+        //     Types differ (e.g., morphing an <h1> into a <span>), so we can't recycle.
+        //     A new DOM node must be created from scratch.
+        //     Create a new fiber with dom: null and set effectTag to "PLACEMENT".
+        if (element && !sameType) {
+            newFiber = {
+                type: element.type,
+                props: element.props,
+                dom: null,
+                parent: wipFiber,
+                alternate: null,
+                effectTag: "PLACEMENT",
+            };
+        }
 
-        // TODO – Case 3: old fiber exists, different type → DELETION
-        //   The old node is obsolete and must be cleared from the UI.
-        //   We don't create a new fiber. Instead, set effectTag to "DELETION"
-        //   on the oldFiber and push it to the `deletions` array.
+        // Case 3: old fiber exists, different type → DELETION
+        //     The old node is obsolete and must be cleared from the UI.
+        //     We don't create a new fiber. Instead, set effectTag to "DELETION"
+        //     on the oldFiber and push it to the `deletions` array.
+        if (oldFiber && !sameType) {
+            oldFiber.effectTag = "DELETION";
+            deletions.push(oldFiber);
+        }
 
         if (oldFiber) {
             oldFiber = oldFiber.sibling
