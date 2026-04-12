@@ -34,30 +34,55 @@ function createTextElement(text) {
     }
 }
 
+let wipRoot = null
+let currentRoot = null
+let deletions = null
+
+// Updated render: sets up the wipRoot instead of touching the DOM directly
 function render(element, container) {
-    // TODO: implement the steps described above
-    /*
-    if (element.type === "TEXT_ELEMENT") {
-      const textNode = document.createTextNode("");
-    } else {
-      const dom = document.createElement(element.type);
+    wipRoot = {
+        dom: container,
+        props: { children: [element] },
+        alternate: currentRoot,
     }
-    Tinha feito dessa forma, mas deu errado pois a variavel dom nao existe fora do if else. Pesquisei a forma debaixo que é mais comum no react.
-    */
+    deletions = []
+    nextUnitOfWork = wipRoot
+}
 
-    const dom = element.type === "TEXT_ELEMENT"
-        ? document.createTextNode(element.props.nodeValue)
-        : document.createElement(element.type);
+function commitRoot() {
+    deletions.forEach(commitWork)
+    commitWork(wipRoot.child)
+    currentRoot = wipRoot
+    wipRoot = null
+}
 
-    Object.keys(element.props)
-        .filter(key => key !== "children")
-        .forEach(name => {
-            dom[name] = element.props[name];
-        });
+function commitWork(fiber) {
+    if (!fiber) return
 
-    element.props.children.forEach(child => render(child, dom));
+    let domParentFiber = fiber.parent
+    while (!domParentFiber.dom) {
+        domParentFiber = domParentFiber.parent
+    }
+    const domParent = domParentFiber.dom
 
-    container.appendChild(dom);
+    if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
+        domParent.appendChild(fiber.dom)
+    } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
+        updateDom(fiber.dom, fiber.alternate.props, fiber.props)
+    } else if (fiber.effectTag === "DELETION") {
+        commitDeletion(fiber, domParent)
+    }
+
+    commitWork(fiber.child)
+    commitWork(fiber.sibling)
+}
+
+function commitDeletion(fiber, domParent) {
+    if (fiber.dom) {
+        domParent.removeChild(fiber.dom)
+    } else {
+        commitDeletion(fiber.child, domParent)
+    }
 }
 
 let nextUnitOfWork = null
@@ -174,3 +199,75 @@ console.log("--- Traversal Finished ---");
 
 // Restore the original function for the next missions
 updateHostComponent = originalUpdateHost;
+
+const isEvent     = key => key.startsWith("on")
+const isProperty  = key => key !== "children" && !isEvent(key)
+const isNew       = (prev, next) => key => prev[key] !== next[key]
+const isGone      = (prev, next) => key => !(key in next)
+
+function updateDom(dom, prevProps, nextProps) {
+    // TODO: implement the four cases described above
+}
+
+function reconcileChildren(wipFiber, elements) {
+    let index = 0
+    let oldFiber = wipFiber.alternate && wipFiber.alternate.child
+    let prevSibling = null
+    // Note: `deletions` is the global array declared in section 3.1.
+    // Case 3 will push obsolete fibers into it so commitRoot() can remove them.
+
+    while (index < elements.length || oldFiber != null) {
+        const element = elements[index]
+        let newFiber = null
+
+        const sameType = oldFiber && element && element.type == oldFiber.type
+
+        // TODO – Case 1: same type → UPDATE
+        //   Performance win: The element type is the same, so we recycle the DOM node.
+        //   Create a new fiber keeping the existing DOM node, copy the new props, and set the effectTag to "UPDATE".
+
+        // TODO – Case 2: new element, different type → PLACEMENT
+        //   Types differ (e.g., morphing an <h1> into a <span>), so we can't recycle.
+        //   A new DOM node must be created from scratch.
+        //   Create a new fiber with dom: null and set effectTag to "PLACEMENT".
+
+        // TODO – Case 3: old fiber exists, different type → DELETION
+        //   The old node is obsolete and must be cleared from the UI.
+        //   We don't create a new fiber. Instead, set effectTag to "DELETION"
+        //   on the oldFiber and push it to the `deletions` array.
+
+        if (oldFiber) {
+            oldFiber = oldFiber.sibling
+        }
+
+        if (index === 0) {
+            wipFiber.child = newFiber
+        } else if (element) {
+            prevSibling.sibling = newFiber
+        }
+
+        prevSibling = newFiber
+        index++
+    }
+}
+
+const Didact = { createElement, render };
+const container = document.getElementById("root");
+
+function updateApp(title, description) {
+    const element = Didact.createElement(
+        "div",
+        { style: "background: lightblue; padding: 20px; border-radius: 8px;" },
+        Didact.createElement("h1", null, title),
+        Didact.createElement("p", null, description)
+    );
+    Didact.render(element, container);
+}
+
+// 1. Test Initial Render (PLACEMENT)
+updateApp("Mission 3: Fiber Tree works! 🌳", "Wait 2 seconds for the update...");
+
+// 2. Test Reconciliation (UPDATE)
+setTimeout(() => {
+    updateApp("Mission 3: Reconciliation works! 🔄", "The DOM was updated without recreating the wrapper div.");
+}, 2000);
