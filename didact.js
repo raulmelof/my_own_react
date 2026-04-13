@@ -325,65 +325,23 @@ function reconcileChildren(wipFiber, elements) {
     }
 }
 
-let wipFiber = null
-let hookIndex = null
-
-function updateFunctionComponent(fiber) {
-    wipFiber = fiber
-    hookIndex = 0
-    wipFiber.hooks = []
-
-    // When we call fiber.type(fiber.props), any useState inside it 
-    // will be able to read the global variables above.
-    const children = [fiber.type(fiber.props)]
-    reconcileChildren(fiber, children)
-}
-
-function useState(initial) {
-    // 1. Retrieve old state
-    const oldHook = wipFiber.alternate && wipFiber.alternate.hooks && wipFiber.alternate.hooks[hookIndex];
-
-    // 2. Initialize
-    const newHook = {
-        state: oldHook ? oldHook.state : initial,
-        queue: []
-    };
-
-    // 3. Process the queue (Batching)
-    const actions = oldHook ? oldHook.queue : [];
-    actions.forEach(action => {newHook.state = typeof action === "function" ? action(newHook.state): action});
-
-    // 4. The setState dispatcher
-    const setState = action => {
-    newHook.queue.push(action);
-    wipRoot = {
-      dom: currentRoot.dom,
-      props: currentRoot.props,
-      alternate: currentRoot,
-    };
-    nextUnitOfWork = wipRoot;
-    deletions = [];
-    };
-
-    // 5. Advance the cursor
-    wipFiber.hooks.push(newHook);
-    hookIndex++;
-    return [newHook.state, setState];
-}
-
 const Didact = { createElement, render };
 const container = document.getElementById("root");
 
-// A proper Function Component!
-function Greeting(props) {
-    return Didact.createElement(
-        "h1", 
-        { style: "color: green;" }, 
-        "Mission 4: Hello, ", 
-        props.name, 
-        "!"
+function updateApp(title, description) {
+    const element = Didact.createElement(
+        "div",
+        { style: "background: lightblue; padding: 20px; border-radius: 8px;" },
+        Didact.createElement("h1", null, title),
+        Didact.createElement("p", null, description)
     );
+    Didact.render(element, container);
 }
 
-const App = Didact.createElement(Greeting, { name: "Function Components" });
-Didact.render(App, container);
+// 1. Test Initial Render (PLACEMENT)
+updateApp("Mission 3: Fiber Tree works! 🌳", "Wait 2 seconds for the update...");
+
+// 2. Test Reconciliation (UPDATE)
+setTimeout(() => {
+    updateApp("Mission 3: Reconciliation works! 🔄", "The DOM was updated without recreating the wrapper div.");
+}, 2000);
